@@ -13,9 +13,18 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.set('trust proxy', true);
+app.use((err, req, res, next) => {
+  res.status(500).json({
+    message: err.message
+  });
+});
 
 app.get('/', (req, res) => {
   res.send('OTP Service Running');
+});
+
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'OK' });
 });
 
 app.use('/api', validateEmail, otpRoutes);
