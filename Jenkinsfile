@@ -53,26 +53,41 @@ pipeline {
             }
         }
 
-      stage('Deploy to EC2') {
-    steps {
-        sshagent(credentials: ['ec2-key']) {
-            sh '''
-            ssh -o StrictHostKeyChecking=no ubuntu@16.171.172.56 << EOF
+        stage('Deploy to EC2') {
+            steps {
 
-            docker pull 761554981636.dkr.ecr.eu-north-1.amazonaws.com/otp-service:latest
+                sshagent(credentials: ['ec2-key']) {
 
-            docker stop otp-service || true
-            docker rm otp-service || true
+                    withCredentials([[
+                        $class: 'AmazonWebServicesCredentialsBinding',
+                        credentialsId: 'aws-ecr-credentials'
+                    ]]) {
 
-            docker run -d \
-              --name otp-service \
-              -p 3000:3000 \
-              761554981636.dkr.ecr.eu-north-1.amazonaws.com/otp-service:latest
+                        sh """
+                        ssh -o StrictHostKeyChecking=no ubuntu@16.171.172.56 << EOF
 
-            EOF
-            '''
+                        export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+                        export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+                        export AWS_DEFAULT_REGION=$AWS_REGION
+
+                        aws ecr get-login-password --region $AWS_REGION | \
+                        docker login --username AWS --password-stdin $ECR_REPO
+
+                        docker pull $ECR_REPO:$IMAGE_TAG
+
+                        docker stop otp-service || true
+                        docker rm otp-service || true
+
+                        docker run -d \\
+                          --name otp-service \\
+                          -p 3000:3000 \\
+                          $ECR_REPO:$IMAGE_TAG
+
+                        EOF
+                        """
+                    }
+                }
+            }
         }
-    }
-}
     }
 }
