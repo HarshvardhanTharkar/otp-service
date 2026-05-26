@@ -53,27 +53,26 @@ pipeline {
             }
         }
 
-        stage('Deploy to EC2') {
-            steps {
-                sshagent(credentials: ['ec2-key']) {
+      stage('Deploy to EC2') {
+    steps {
+        sshagent(credentials: ['ec2-key']) {
+            sh '''
+            ssh -o StrictHostKeyChecking=no ubuntu@16.171.172.56 << EOF
 
-                    sh """
-                    ssh -o StrictHostKeyChecking=no ubuntu@YOUR_PUBLIC_IP '
+            docker pull 761554981636.dkr.ecr.eu-north-1.amazonaws.com/otp-service:latest
 
-                    docker pull $ECR_REPO:$IMAGE_TAG
+            docker stop otp-service || true
+            docker rm otp-service || true
 
-                    docker stop otp-service || true
-                    docker rm otp-service || true
+            docker run -d \
+              --name otp-service \
+              -p 3000:3000 \
+              761554981636.dkr.ecr.eu-north-1.amazonaws.com/otp-service:latest
 
-                    docker run -d \
-                      --name otp-service \
-                      -p 5000:5000 \
-                      --env-file .env \
-                      $ECR_REPO:$IMAGE_TAG
-                    '
-                    """
-                }
-            }
+            EOF
+            '''
         }
+    }
+}
     }
 }
