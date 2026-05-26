@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         AWS_REGION = "ap-south-1"
-        ECR_REPO = "YOUR_ECR_URI"
+        ECR_REPO = "761554981636.dkr.ecr.eu-north-1.amazonaws.com/otp-service"
         IMAGE_TAG = "latest"
     }
 
