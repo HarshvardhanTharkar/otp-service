@@ -1,195 +1,349 @@
+OTP Service SaaS — Full Stack DevOps Project
 
-A production-ready **OTP (One-Time Password) microservice** built using **Node.js, Express, MongoDB, and Mongoose**.  
-This service allows secure OTP generation, email delivery, verification, rate limiting, and automatic expiry.
+A production-style OTP (One-Time Password) SaaS application built using Node.js, MongoDB, Docker, Jenkins, AWS EC2, and AWS ECR.
 
----
+This project demonstrates a complete end-to-end Full Stack + DevOps workflow including:
 
-# 📌 Features
-
-- Generate OTP for email verification
-- Secure OTP storage using hashing (SHA-256)
-- Email delivery using SMTP (Nodemailer)
-- OTP verification API
-- Automatic OTP expiry (TTL index)
-- Rate limiting to prevent spam
-- Blocklist support (email/IP)
-- Clean modular architecture (MVC pattern)
-
----
-
-# 🏗️ Tech Stack
-
-- **Backend:** Node.js, Express.js  
-- **Database:** MongoDB  
-- **ODM:** Mongoose  
-- **Email Service:** Nodemailer  
-- **Security:** Crypto (SHA-256 hashing)
-
----
-
-# 📂 Project Structure
+OTP generation and verification
+REST API development
+MongoDB integration
+Docker containerization
+Jenkins CI/CD pipeline
+AWS ECR image registry
+AWS EC2 deployment
+Automated Docker deployments
+SMTP email integration using Gmail
+Architecture
+Frontend UI
+     ↓
+Node.js Express Backend
+     ↓
+MongoDB Database
 
 
+-----------------------------
+CI/CD FLOW
+-----------------------------
+GitHub
+   ↓
+Jenkins Pipeline
+   ↓
+Docker Build
+   ↓
+AWS ECR Push
+   ↓
+EC2 Deployment via SSH
+   ↓
+Docker Container Deployment
+Tech Stack
+Frontend
+HTML
+CSS
+JavaScript
+Backend
+Node.js
+Express.js
+Nodemailer
+Mongoose
+Database
+MongoDB
+DevOps & Cloud
+Docker
+Jenkins
+AWS EC2
+AWS ECR
+GitHub
+Linux (Ubuntu)
+Features
+Generate OTP
+Verify OTP
+Email-based OTP delivery
+MongoDB OTP storage
+Dockerized backend
+CI/CD with Jenkins
+Automated deployment to EC2
+Secure AWS ECR integration
+SMTP integration with Gmail App Password
+Environment variable based configuration
+Project Structure
 otp-service/
 │
 ├── config/
-│ └── connectDB.js # MongoDB connection setup
+│   └── connectDB.js
 │
 ├── controllers/
-│ ├── otpController.js # OTP generation & verification logic
-│ └── sendMailController.js # Email sending logic
+│   ├── otpController.js
+│   └── sendMailController.js
 │
 ├── middleware/
-│ └── index.js # Email validation & rate limiting
+│   └── index.js
 │
 ├── models/
-│ ├── otpModel.js # OTP schema & model
-│ └── blockListModel.js # Blocklist schema
+│   └── otpModel.js
 │
 ├── routes/
-│ └── otpRoutes.js # API routes
+│   └── otpRoutes.js
 │
 ├── utils/
-│ ├── generateOTP.js # OTP generator
-│ ├── validator.js # Email validator
-│ └── logger.js # Logging utility
+│   └── logger.js
 │
-├── index.js # Entry point
+├── Dockerfile
+├── Jenkinsfile
 ├── package.json
-└── .env # Environment variables
-
-
----
-
-# ⚙️ Installation & Setup
-
-## 1️⃣ Clone Repository
-
-```bash
+├── server.js
+└── .env
+Local Setup
+1. Clone Repository
 git clone https://github.com/HarshvardhanTharkar/otp-service.git
 cd otp-service
-2️⃣ Install Dependencies
+2. Install Dependencies
 npm install
-3️⃣ Setup Environment Variables
+3. Configure Environment Variables
 
-Create a .env file in the root directory:
+Create a .env file:
 
 PORT=5000
-MONGODB_URI=mongodb://localhost:27017/otp-service
+NODE_ENV=development
+
+
+MONGODB_URI=mongodb://127.0.0.1:27017/otp_service
+
 
 SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
+SMTP_PORT=465
 SMTP_USER=your_email@gmail.com
-SMTP_PASS=your_password
-
-OTP_SIZE=6
-OTP_VALIDITY_PERIOD_MINUTES=5
-MAX_OTP_ATTEMPTS=3
-4️⃣ Start the Server
+SMTP_PASS=your_gmail_app_password
+4. Start MongoDB
+mongod
+5. Run Backend
 npm start
 
 Server runs at:
 
 http://localhost:5000
-🔌 API Endpoints
-📥 Generate OTP
+Docker Setup
+Build Docker Image
+docker build -t otp-service .
+Run Docker Container
+docker run -d \
+  --name otp-service \
+  -p 3000:5000 \
+  --env-file .env \
+  otp-service
+MongoDB Docker Setup
+Create Docker Network
+docker network create app-network
+Run MongoDB Container
+docker run -d \
+  --name mongodb \
+  --network app-network \
+  -p 27017:27017 \
+  mongo
+Run OTP Service Container
+docker run -d \
+  --name otp-service \
+  --restart unless-stopped \
+  --network app-network \
+  -p 3000:5000 \
+  -e MONGODB_URI="mongodb://mongodb:27017/otp_service" \
+  -e SMTP_HOST="smtp.gmail.com" \
+  -e SMTP_PORT="465" \
+  -e SMTP_USER="your_email@gmail.com" \
+  -e SMTP_PASS="your_app_password" \
+  761554981636.dkr.ecr.eu-north-1.amazonaws.com/otp-service:latest
+Jenkins CI/CD Pipeline
+Pipeline Workflow
+Clone GitHub repository
+Build Docker image
+Authenticate with AWS ECR
+Push Docker image to ECR
+SSH into EC2 instance
+Pull latest Docker image
+Restart application container
+Jenkinsfile
+pipeline {
+    agent any
 
-POST /api/otp/generate
 
-Request Body:
+    environment {
+        AWS_REGION = "eu-north-1"
+        ECR_REPO = "761554981636.dkr.ecr.eu-north-1.amazonaws.com/otp-service"
+        IMAGE_TAG = "latest"
+    }
+
+
+    stages {
+
+
+        stage('Clone Repository') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/HarshvardhanTharkar/otp-service.git',
+                    credentialsId: 'github-credentials'
+            }
+        }
+
+
+        stage('Login to ECR') {
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-ecr-credentials'
+                ]]) {
+
+
+                    sh """
+                    aws ecr get-login-password \
+                    --region $AWS_REGION | \
+                    docker login \
+                    --username AWS \
+                    --password-stdin $ECR_REPO
+                    """
+                }
+            }
+        }
+
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t otp-service .'
+            }
+        }
+
+
+        stage('Tag Docker Image') {
+            steps {
+                sh 'docker tag otp-service:latest $ECR_REPO:$IMAGE_TAG'
+            }
+        }
+
+
+        stage('Push Docker Image') {
+            steps {
+                sh 'docker push $ECR_REPO:$IMAGE_TAG'
+            }
+        }
+
+
+        stage('Deploy to EC2') {
+            steps {
+                sshagent(credentials: ['ec2-key']) {
+
+
+                    withCredentials([[
+AWS Infrastructure
+EC2
+Ubuntu Server
+Docker Installed
+Jenkins Installed
+Security Group configured
+Open Ports
+Port	Purpose
+22	SSH
+8080	Jenkins
+3000	OTP Backend
+50000	Jenkins Agent
+AWS ECR
+
+Used for storing Docker images.
+
+Example repository:
+
+761554981636.dkr.ecr.eu-north-1.amazonaws.com/otp-service
+Gmail SMTP Setup
+Enable 2-Step Verification
+
+Google Account → Security → 2-Step Verification
+
+Generate App Password
+
+Google Account → App Passwords
+
+Use generated password inside:
+
+SMTP_PASS=your_generated_app_password
+API Endpoints
+Generate OTP
+POST
+/api/otp/generate
+Request Body
 {
-  "email": "user@example.com"
+  "email": "user@example.com",
+  "type": "numeric",
+  "organization": "OTP SaaS",
+  "subject": "Your OTP Code"
 }
-Response:
-{
-  "message": "OTP sent successfully"
-}
-📤 Verify OTP
-
-POST /api/otp/verify
-
-Request Body:
+Verify OTP
+POST
+/api/otp/verify
+Request Body
 {
   "email": "user@example.com",
   "otp": "123456"
 }
-Response:
-{
-  "message": "OTP verified successfully"
-}
-🔄 How It Works
-1. OTP Generation
-User sends email
-OTP is generated
-OTP is hashed using SHA-256
-Stored in MongoDB
-Sent via email
-2. OTP Verification
-User submits OTP
-Input OTP is hashed
-Compared with stored OTP
-If matched → success
-OTP record deleted
-3. Expiry
-OTP expires automatically using MongoDB TTL index
-🧠 Database Design
-OTP Collection (otps)
-{
-  "email": "user@example.com",
-  "otp": "hashed_value",
-  "attempts": 1,
-  "createdAt": "timestamp"
-}
-Blocklist Collection (blocklists)
-{
-  "email": "blocked@example.com",
-  "ip": "192.168.1.1"
-}
-🔐 Security Features
-OTP is never stored in plain text
-SHA-256 hashing used
-Rate limiting prevents abuse
-Blocklist support for malicious users
-TTL ensures automatic cleanup
-🚫 Rate Limiting
-Limits OTP requests per email/IP
-Prevents brute force attacks
-Controlled via in-memory tracking
-⏳ TTL (Auto Expiry)
+Deployment Commands
+Check Running Containers
+docker ps
+View Logs
+docker logs -f otp-service
+Restart Container
+docker restart otp-service
+Future Improvements
+Docker Compose
+Kubernetes deployment
+Nginx reverse proxy
+HTTPS using Certbot
+GitHub Webhooks
+Terraform Infrastructure as Code
+Monitoring with Prometheus & Grafana
+AWS ECS deployment
+Rate limiting
+Redis OTP caching
+JWT Authentication
+Learning Outcomes
 
-MongoDB automatically deletes OTPs after expiry time:
+This project demonstrates practical knowledge of:
 
-expires: 300 // seconds
-
-No manual cleanup required.
-
-📬 Email Service
-
-Uses Nodemailer with SMTP configuration.
-
-Example email:
-
-Subject: Your OTP Code
-
-Your OTP is: 123456
-🧪 Testing (Using Postman)
-Generate OTP
-Method: POST
-URL: http://localhost:5000/api/otp/generate
-Verify OTP
-Method: POST
-URL: http://localhost:5000/api/otp/verify
-🚀 Future Improvements
-Redis-based rate limiting
-SMS OTP support
-Multi-factor authentication (MFA)
-JWT integration after verification
-Docker containerization
-Logging with Winston / ELK stack
-🧑‍💻 Author
+Full Stack Development
+REST APIs
+Node.js Backend Development
+MongoDB Integration
+Docker Containerization
+CI/CD Pipeline Automation
+AWS Cloud Deployment
+Jenkins Automation
+Linux Server Management
+SMTP Email Integration
+Production Deployment Workflow
+Author
 
 Harshvardhan Tharkar
 
-📜 License
+GitHub:
 
-This project is open-source and available under the MIT License.
+https://github.com/HarshvardhanTharkar
+License
+
+This project is created for educational and portfolio purposes.
+
+Created a complete production-style GitHub README covering:
+
+Full stack architecture
+Docker setup
+MongoDB setup
+Jenkins CI/CD
+AWS EC2 + ECR deployment
+SMTP configuration
+API documentation
+Deployment workflow
+DevOps architecture
+Future improvements
+Commands and troubleshooting
+
+It is structured for:
+
+GitHub portfolio
+Resume projects
+Recruiter visibility
+DevOps showcase
+Real-world deployment demonstration
